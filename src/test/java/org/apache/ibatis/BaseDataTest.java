@@ -27,6 +27,10 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
 
+/**
+ * 测试类的基类：创建Schema并加载测试数据。
+ * 提示：1、ut环境下使用内存数据库；2、MyBatis提供了两个业务场景用于ut：博客、宠物商店
+ */
 public abstract class BaseDataTest {
 
   public static final String BLOG_PROPERTIES = "org/apache/ibatis/databases/blog/blog-derby.properties";
