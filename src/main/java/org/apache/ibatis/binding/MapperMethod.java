@@ -36,6 +36,10 @@ import java.lang.reflect.Type;
 import java.util.*;
 
 /**
+ *
+ * 映射器方法：方法签名 + Sql命令（先拿到MappedStatement，再提取属性得到Sql命令）。
+ * 提示："绑定"关系是通过statementId实现的。
+ *
  * @author Clinton Begin
  * @author Eduardo Macarron
  * @author Lasse Voss
@@ -245,7 +249,7 @@ public class MapperMethod {
 
     private MappedStatement resolveMappedStatement(Class<?> mapperInterface, String methodName,
         Class<?> declaringClass, Configuration configuration) {
-      String statementId = mapperInterface.getName() + "." + methodName;
+      String statementId = mapperInterface.getName() + "." + methodName; // 语句Id将映射器方法和<select>标签"绑定"在一起。
       if (configuration.hasStatement(statementId)) {
         return configuration.getMappedStatement(statementId);
       } else if (mapperInterface.equals(declaringClass)) {
@@ -288,8 +292,8 @@ public class MapperMethod {
       this.returnsVoid = void.class.equals(this.returnType);
       this.returnsMany = configuration.getObjectFactory().isCollection(this.returnType) || this.returnType.isArray();
       this.returnsCursor = Cursor.class.equals(this.returnType);
-      this.mapKey = getMapKey(method);
-      this.returnsMap = this.mapKey != null;
+      this.mapKey = getMapKey(method); // 获得@MapKey中配置的映射键
+      this.returnsMap = this.mapKey != null; // 根据"是否配置映射键"来决定是否返回结果Map
       this.rowBoundsIndex = getUniqueParamIndex(method, RowBounds.class);
       this.resultHandlerIndex = getUniqueParamIndex(method, ResultHandler.class);
       this.paramNameResolver = new ParamNameResolver(configuration, method);

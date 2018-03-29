@@ -15,21 +15,28 @@
  */
 package org.apache.ibatis.session;
 
+import org.apache.ibatis.cursor.Cursor;
+import org.apache.ibatis.executor.BatchResult;
+
 import java.io.Closeable;
 import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.ibatis.cursor.Cursor;
-import org.apache.ibatis.executor.BatchResult;
-
 /**
  * The primary Java interface for working with MyBatis.
  * Through this interface you can execute commands, get mappers and manage transactions.
  *
+ * CRUD操作的高层API
+ *
  * @author Clinton Begin
  */
 public interface SqlSession extends Closeable {
+  // 一共2 + 3 + 3 + 3 + 3 = 14个select操作方法。
+  // selectOne，返回一行；selectList、selectMap、selectCursor、select，返回多行。
+  // select没有返回值，是因为返回值都送入ResultHandler处理。
+
+  // insert、update、delete各2个操作方法。它们的形参情况跟selectOne一致。
 
   /**
    * Retrieve a single row mapped from the statement key
@@ -71,7 +78,7 @@ public interface SqlSession extends Closeable {
    * @param <E> the returned list element type
    * @param statement Unique identifier matching the statement to use.
    * @param parameter A parameter object to pass to the statement.
-   * @param rowBounds  Bounds to limit object retrieval
+   * @param rowBounds  Bounds to limit object retrieval // 行限制
    * @return List of mapped object
    */
   <E> List<E> selectList(String statement, Object parameter, RowBounds rowBounds);

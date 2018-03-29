@@ -15,14 +15,17 @@
  */
 package org.apache.ibatis.executor.result;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.ibatis.reflection.factory.ObjectFactory;
 import org.apache.ibatis.session.ResultContext;
 import org.apache.ibatis.session.ResultHandler;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
+ *
+ * 保存"每行结果 -> Java对象"的数组
+ *
  * @author Clinton Begin
  */
 public class DefaultResultHandler implements ResultHandler<Object> {
@@ -40,7 +43,7 @@ public class DefaultResultHandler implements ResultHandler<Object> {
 
   @Override
   public void handleResult(ResultContext<? extends Object> context) {
-    list.add(context.getResultObject());
+    list.add(context.getResultObject()); // 注意：该list中可能含有null元素
   }
 
   public List<Object> getResultList() {

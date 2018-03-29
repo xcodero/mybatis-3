@@ -15,17 +15,20 @@
  */
 package org.apache.ibatis.builder.xml;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Locale;
-
 import org.apache.ibatis.io.Resources;
 import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Locale;
+
 /**
  * Offline entity resolver for the MyBatis DTDs
+ *
+ * 保证断网情况下也能做DTD验证。（在org.apache.ibatis.builder.xml包下存储了本地DTD文件，该类将互联网上的DTD文件映射到本地的DTD文件。）
+ * 提示：命名不准确，XMLConfigBuilder、XMLMapperBuilder都用到了。
  * 
  * @author Clinton Begin
  * @author Eduardo Macarron

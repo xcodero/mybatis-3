@@ -15,12 +15,11 @@
  */
 package org.apache.ibatis.transaction;
 
-import java.sql.Connection;
-import java.util.Properties;
+import org.apache.ibatis.session.TransactionIsolationLevel;
 
 import javax.sql.DataSource;
-
-import org.apache.ibatis.session.TransactionIsolationLevel;
+import java.sql.Connection;
+import java.util.Properties;
 
 /**
  * Creates {@link Transaction} instances.
@@ -41,6 +40,7 @@ public interface TransactionFactory {
    * @return Transaction
    * @since 3.1.0
    */
+  // 将已有连接适配为事务
   Transaction newTransaction(Connection conn);
   
   /**
@@ -51,6 +51,7 @@ public interface TransactionFactory {
    * @return Transaction
    * @since 3.1.0
    */
+  // 从数据源中获取连接并设定隔离级别、自动提交，再适配为事务
   Transaction newTransaction(DataSource dataSource, TransactionIsolationLevel level, boolean autoCommit);
 
 }

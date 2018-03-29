@@ -15,18 +15,18 @@
  */
 package org.apache.ibatis.reflection;
 
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.binding.MapperMethod.ParamMap;
+import org.apache.ibatis.session.Configuration;
+import org.apache.ibatis.session.ResultHandler;
+import org.apache.ibatis.session.RowBounds;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.binding.MapperMethod.ParamMap;
-import org.apache.ibatis.session.Configuration;
-import org.apache.ibatis.session.ResultHandler;
-import org.apache.ibatis.session.RowBounds;
 
 public class ParamNameResolver {
 
@@ -51,12 +51,12 @@ public class ParamNameResolver {
 
   public ParamNameResolver(Configuration config, Method method) {
     final Class<?>[] paramTypes = method.getParameterTypes();
-    final Annotation[][] paramAnnotations = method.getParameterAnnotations();
+    final Annotation[][] paramAnnotations = method.getParameterAnnotations(); // 二维数组：第一维表示第几个参数、第二维表示该参数的注解
     final SortedMap<Integer, String> map = new TreeMap<Integer, String>();
     int paramCount = paramAnnotations.length;
     // get names from @Param annotations
     for (int paramIndex = 0; paramIndex < paramCount; paramIndex++) {
-      if (isSpecialParameter(paramTypes[paramIndex])) {
+      if (isSpecialParameter(paramTypes[paramIndex])) { // 特殊参数指：RowBounds参数或ResultHandler参数
         // skip special parameters
         continue;
       }

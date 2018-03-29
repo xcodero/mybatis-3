@@ -15,23 +15,19 @@
  */
 package org.apache.ibatis.builder.xml;
 
-import java.util.List;
-import java.util.Locale;
-
 import org.apache.ibatis.builder.BaseBuilder;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator;
 import org.apache.ibatis.executor.keygen.KeyGenerator;
 import org.apache.ibatis.executor.keygen.NoKeyGenerator;
 import org.apache.ibatis.executor.keygen.SelectKeyGenerator;
-import org.apache.ibatis.mapping.MappedStatement;
-import org.apache.ibatis.mapping.ResultSetType;
-import org.apache.ibatis.mapping.SqlCommandType;
-import org.apache.ibatis.mapping.SqlSource;
-import org.apache.ibatis.mapping.StatementType;
+import org.apache.ibatis.mapping.*;
 import org.apache.ibatis.parsing.XNode;
 import org.apache.ibatis.scripting.LanguageDriver;
 import org.apache.ibatis.session.Configuration;
+
+import java.util.List;
+import java.util.Locale;
 
 /**
  * @author Clinton Begin
@@ -78,16 +74,17 @@ public class XMLStatementBuilder extends BaseBuilder {
 
     String nodeName = context.getNode().getNodeName();
     SqlCommandType sqlCommandType = SqlCommandType.valueOf(nodeName.toUpperCase(Locale.ENGLISH));
+    // 关于缓存的默认值设定都是根据isSelect来的
     boolean isSelect = sqlCommandType == SqlCommandType.SELECT;
     boolean flushCache = context.getBooleanAttribute("flushCache", !isSelect);
     boolean useCache = context.getBooleanAttribute("useCache", isSelect);
     boolean resultOrdered = context.getBooleanAttribute("resultOrdered", false);
 
-    // Include Fragments before parsing
+    // Include Fragments before parsing（简单置换，相当于重建XML文档）
     XMLIncludeTransformer includeParser = new XMLIncludeTransformer(configuration, builderAssistant);
     includeParser.applyIncludes(context.getNode());
 
-    // Parse selectKey after includes and remove them.
+    // Parse selectKey after includes and remove them.（注册keyGenerator）
     processSelectKeyNodes(id, parameterTypeClass, langDriver);
     
     // Parse the SQL (pre: <selectKey> and <include> were parsed and removed)
@@ -98,10 +95,10 @@ public class XMLStatementBuilder extends BaseBuilder {
     KeyGenerator keyGenerator;
     String keyStatementId = id + SelectKeyGenerator.SELECT_KEY_SUFFIX;
     keyStatementId = builderAssistant.applyCurrentNamespace(keyStatementId, true);
-    if (configuration.hasKeyGenerator(keyStatementId)) {
+    if (configuration.hasKeyGenerator(keyStatementId)) { // 若已经通过<selectKey>元素注册过keyGenerator，用它
       keyGenerator = configuration.getKeyGenerator(keyStatementId);
     } else {
-      keyGenerator = context.getBooleanAttribute("useGeneratedKeys",
+      keyGenerator = context.getBooleanAttribute("useGeneratedKeys", // 优先级：useGeneratedKeys > configuration中的配置
           configuration.isUseGeneratedKeys() && SqlCommandType.INSERT.equals(sqlCommandType))
           ? Jdbc3KeyGenerator.INSTANCE : NoKeyGenerator.INSTANCE;
     }

@@ -15,23 +15,27 @@
  */
 package org.apache.ibatis.session;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
-import java.util.Properties;
-
 import org.apache.ibatis.builder.xml.XMLConfigBuilder;
 import org.apache.ibatis.exceptions.ExceptionFactory;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.session.defaults.DefaultSqlSessionFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.util.Properties;
+
 /**
  * Builds {@link SqlSession} instances.
+ *
+ * SqlSessionFactory的builder类。
+ * 提示：属于构建器模式，但与标准的构建器模式略有不同。它不是在构建过程中通过setter方法注入属性值，再通过无参build方法返回目标对象；而是在build方法时完成属性注入，同时返回目标对象。
  *
  * @author Clinton Begin
  */
 public class SqlSessionFactoryBuilder {
 
+  // 前4个一组，使用Reader构建
   public SqlSessionFactory build(Reader reader) {
     return build(reader, null, null);
   }
@@ -46,6 +50,7 @@ public class SqlSessionFactoryBuilder {
 
   public SqlSessionFactory build(Reader reader, String environment, Properties properties) {
     try {
+      // 新建XMLConfigBuilder实例，拉开了XML文件（磁盘） -> Configuration实例（内存）的序幕
       XMLConfigBuilder parser = new XMLConfigBuilder(reader, environment, properties);
       return build(parser.parse());
     } catch (Exception e) {
@@ -60,6 +65,7 @@ public class SqlSessionFactoryBuilder {
     }
   }
 
+  // 后4个一组，使用InputStream构建
   public SqlSessionFactory build(InputStream inputStream) {
     return build(inputStream, null, null);
   }

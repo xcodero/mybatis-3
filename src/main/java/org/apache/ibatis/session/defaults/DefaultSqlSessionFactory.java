@@ -15,21 +15,17 @@
  */
 package org.apache.ibatis.session.defaults;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-
 import org.apache.ibatis.exceptions.ExceptionFactory;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.Environment;
-import org.apache.ibatis.session.Configuration;
-import org.apache.ibatis.session.ExecutorType;
-import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.apache.ibatis.session.TransactionIsolationLevel;
+import org.apache.ibatis.session.*;
 import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.transaction.managed.ManagedTransactionFactory;
+
+import java.sql.Connection;
+import java.sql.SQLException;
 
 /**
  * @author Clinton Begin
@@ -38,10 +34,12 @@ public class DefaultSqlSessionFactory implements SqlSessionFactory {
 
   private final Configuration configuration;
 
-  public DefaultSqlSessionFactory(Configuration configuration) {
+  public DefaultSqlSessionFactory(Configuration configuration) { //
     this.configuration = configuration;
   }
 
+  //最终都会调用2种方法：openSessionFromDataSource,openSessionFromConnection
+  //以下6个方法都会调用openSessionFromDataSource
   @Override
   public SqlSession openSession() {
     return openSessionFromDataSource(configuration.getDefaultExecutorType(), null, false);
@@ -72,6 +70,7 @@ public class DefaultSqlSessionFactory implements SqlSessionFactory {
     return openSessionFromDataSource(execType, null, autoCommit);
   }
 
+  //以下2个方法都会调用openSessionFromConnection
   @Override
   public SqlSession openSession(Connection connection) {
     return openSessionFromConnection(configuration.getDefaultExecutorType(), connection);

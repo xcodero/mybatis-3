@@ -15,10 +15,6 @@
  */
 package org.apache.ibatis.builder.xml;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-
 import org.apache.ibatis.builder.BuilderException;
 import org.apache.ibatis.builder.IncompleteElementException;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
@@ -28,6 +24,10 @@ import org.apache.ibatis.session.Configuration;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  * @author Frank D. Martinez [mnesarco]
@@ -53,15 +53,23 @@ public class XMLIncludeTransformer {
 
   /**
    * Recursively apply includes through all SQL fragments.
+   *
+   * 该过程的作用：修改source节点的结构，用<sql>节点替换<include>节点。相当于建立一份完整的XML文档。
+   *
    * @param source Include node in DOM tree
    * @param variablesContext Current context for static variables with values
    */
+  //<select id="selectUsers" resultType="map">
+//  select <include refid="userColumns"/>
+//  from some_table
+//  where id = #{id}
+//</select>
   private void applyIncludes(Node source, final Properties variablesContext, boolean included) {
     if (source.getNodeName().equals("include")) {
       Node toInclude = findSqlFragment(getStringAttribute(source, "refid"), variablesContext);
       Properties toIncludeContext = getVariablesContext(source, variablesContext);
-      applyIncludes(toInclude, toIncludeContext, true);
-      if (toInclude.getOwnerDocument() != source.getOwnerDocument()) {
+      applyIncludes(toInclude, toIncludeContext, true); // <sql>片段内include别的<sql>片段
+      if (toInclude.getOwnerDocument() != source.getOwnerDocument()) { // <sql>片段不在当前<include>标签所在文档中
         toInclude = source.getOwnerDocument().importNode(toInclude, true);
       }
       source.getParentNode().replaceChild(toInclude, source);
@@ -90,7 +98,7 @@ public class XMLIncludeTransformer {
   }
 
   private Node findSqlFragment(String refid, Properties variables) {
-    refid = PropertyParser.parse(refid, variables);
+    refid = PropertyParser.parse(refid, variables); // <include refid="${include_target}"/>
     refid = builderAssistant.applyCurrentNamespace(refid, true);
     try {
       XNode nodeToInclude = configuration.getSqlFragments().get(refid);

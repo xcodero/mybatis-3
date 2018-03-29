@@ -15,15 +15,6 @@
  */
 package org.apache.ibatis.session.defaults;
 
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.ibatis.binding.BindingException;
 import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.exceptions.ExceptionFactory;
@@ -39,6 +30,11 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSession;
 
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.*;
+
 /**
  *
  * The default implementation for {@link SqlSession}.
@@ -52,7 +48,7 @@ public class DefaultSqlSession implements SqlSession {
   private final Executor executor;
 
   private final boolean autoCommit;
-  private boolean dirty;
+  private boolean dirty; // 每次CUD操作前先置为true，每次commit|rollback|close操作后置为false
   private List<Cursor<?>> cursorList;
 
   public DefaultSqlSession(Configuration configuration, Executor executor, boolean autoCommit) {
@@ -94,6 +90,7 @@ public class DefaultSqlSession implements SqlSession {
     return this.selectMap(statement, parameter, mapKey, RowBounds.DEFAULT);
   }
 
+  // 核心selectMap
   @Override
   public <K, V> Map<K, V> selectMap(String statement, Object parameter, String mapKey, RowBounds rowBounds) {
     final List<? extends V> list = selectList(statement, parameter, rowBounds);
@@ -141,11 +138,12 @@ public class DefaultSqlSession implements SqlSession {
     return this.selectList(statement, parameter, RowBounds.DEFAULT);
   }
 
+  // 核心selectList
   @Override
   public <E> List<E> selectList(String statement, Object parameter, RowBounds rowBounds) {
     try {
       MappedStatement ms = configuration.getMappedStatement(statement);
-      return executor.query(ms, wrapCollection(parameter), rowBounds, Executor.NO_RESULT_HANDLER);
+      return executor.query(ms, wrapCollection(parameter), rowBounds, Executor.NO_RESULT_HANDLER); // 不带resultHandler
     } catch (Exception e) {
       throw ExceptionFactory.wrapException("Error querying database.  Cause: " + e, e);
     } finally {
@@ -163,11 +161,12 @@ public class DefaultSqlSession implements SqlSession {
     select(statement, null, RowBounds.DEFAULT, handler);
   }
 
+  // 核心select
   @Override
   public void select(String statement, Object parameter, RowBounds rowBounds, ResultHandler handler) {
     try {
       MappedStatement ms = configuration.getMappedStatement(statement);
-      executor.query(ms, wrapCollection(parameter), rowBounds, handler);
+      executor.query(ms, wrapCollection(parameter), rowBounds, handler); // 带resultHandler
     } catch (Exception e) {
       throw ExceptionFactory.wrapException("Error querying database.  Cause: " + e, e);
     } finally {
@@ -313,6 +312,7 @@ public class DefaultSqlSession implements SqlSession {
     cursorList.add(cursor);
   }
 
+  //检查是否需要强制commit或rollback，即调用Transaction的commit|rollback方法。
   private boolean isCommitOrRollbackRequired(boolean force) {
     return (!autoCommit && dirty) || force;
   }

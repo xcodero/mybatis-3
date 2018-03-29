@@ -15,13 +15,13 @@
  */
 package org.apache.ibatis.mapping;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.property.PropertyTokenizer;
 import org.apache.ibatis.session.Configuration;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * An actual SQL String got from an {@link SqlSource} after having processed any dynamic content.
@@ -30,6 +30,10 @@ import org.apache.ibatis.session.Configuration;
  * the value from). 
  * </br>
  * Can also have additional parameters that are created by the dynamic language (for loops, bind...).
+ *
+ * 绑定的SQL：带?的SQL语句字符串+参数信息。
+ * 从SqlSource而来，将动态内容都处理完成得到的SQL语句字符串，其中包括?，还有参数映射、参数对象、额外参数（动态语言创建的）
+ * 提示：参数映射——告诉MyBatis对于SQL语句字符串中的?参数应该从parameterObject中的哪个属性读取
  *
  * @author Clinton Begin
  */

@@ -15,11 +15,6 @@
  */
 package org.apache.ibatis.builder.xml;
 
-import java.io.InputStream;
-import java.io.Reader;
-import java.util.Properties;
-import javax.sql.DataSource;
-
 import org.apache.ibatis.builder.BaseBuilder;
 import org.apache.ibatis.builder.BuilderException;
 import org.apache.ibatis.datasource.DataSourceFactory;
@@ -38,14 +33,15 @@ import org.apache.ibatis.reflection.MetaClass;
 import org.apache.ibatis.reflection.ReflectorFactory;
 import org.apache.ibatis.reflection.factory.ObjectFactory;
 import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
-import org.apache.ibatis.session.AutoMappingBehavior;
-import org.apache.ibatis.session.AutoMappingUnknownColumnBehavior;
-import org.apache.ibatis.session.Configuration;
-import org.apache.ibatis.session.ExecutorType;
-import org.apache.ibatis.session.LocalCacheScope;
+import org.apache.ibatis.session.*;
 import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
+
+import javax.sql.DataSource;
+import java.io.InputStream;
+import java.io.Reader;
+import java.util.Properties;
 
 /**
  * @author Clinton Begin
@@ -83,7 +79,7 @@ public class XMLConfigBuilder extends BaseBuilder {
   }
 
   private XMLConfigBuilder(XPathParser parser, String environment, Properties props) {
-    super(new Configuration());
+    super(new Configuration()); // 新建Configuration对象，整个配置解析过程的起点
     ErrorContext.instance().resource("SQL Mapper Configuration");
     this.configuration.setVariables(props);
     this.parsed = false;
@@ -96,12 +92,15 @@ public class XMLConfigBuilder extends BaseBuilder {
       throw new BuilderException("Each XMLConfigBuilder can only be used once.");
     }
     parsed = true;
-    parseConfiguration(parser.evalNode("/configuration"));
+    parseConfiguration(parser.evalNode("/configuration")); // 配置文件的根节点是configuration
     return configuration;
   }
 
+  // 解析配置文件
+  // 文件内搜索"package".equals，会发现一共3个元素可采用包配置：类型别名、类型处理器、映射器。所谓包配置：顾名思义，就是打包多个类型的配置。
   private void parseConfiguration(XNode root) {
     try {
+      // 分步解析
       //issue #117 read properties first
       propertiesElement(root.evalNode("properties"));
       Properties settings = settingsAsProperties(root.evalNode("settings"));
@@ -214,6 +213,10 @@ public class XMLConfigBuilder extends BaseBuilder {
   }
 
   private void propertiesElement(XNode context) throws Exception {
+    // 注意加载顺序 -> 属性优先级
+    // 1.加载顺序：<properties>标签下的<property>子元素 -> <properties>标签属性指定的资源文件 -> XMLConfigBuilder构造器传入的props
+    // 2.由于后者覆盖前者，因此优先级顺序：构造器传入的props > 资源文件中的props > <property>标签指定的props
+
     if (context != null) {
       Properties defaults = context.getChildrenAsProperties();
       String resource = context.getStringAttribute("resource");
@@ -307,9 +310,13 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  //7.1事务管理器
+//<transactionManager type="JDBC">
+//  <property name="..." value="..."/>
+//</transactionManager>
   private TransactionFactory transactionManagerElement(XNode context) throws Exception {
     if (context != null) {
-      String type = context.getStringAttribute("type");
+      String type = context.getStringAttribute("type"); // JDBC
       Properties props = context.getChildrenAsProperties();
       TransactionFactory factory = (TransactionFactory) resolveClass(type).newInstance();
       factory.setProperties(props);
@@ -318,9 +325,16 @@ public class XMLConfigBuilder extends BaseBuilder {
     throw new BuilderException("Environment declaration requires a TransactionFactory.");
   }
 
+  //7.2数据源
+//<dataSource type="POOLED">
+//  <property name="driver" value="${driver}"/>
+//  <property name="url" value="${url}"/>
+//  <property name="username" value="${username}"/>
+//  <property name="password" value="${password}"/>
+//</dataSource>
   private DataSourceFactory dataSourceElement(XNode context) throws Exception {
     if (context != null) {
-      String type = context.getStringAttribute("type");
+      String type = context.getStringAttribute("type"); // POOLED
       Properties props = context.getChildrenAsProperties();
       DataSourceFactory factory = (DataSourceFactory) resolveClass(type).newInstance();
       factory.setProperties(props);

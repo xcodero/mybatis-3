@@ -15,14 +15,14 @@
  */
 package org.apache.ibatis.executor.result;
 
-import java.util.Map;
-
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.ReflectorFactory;
 import org.apache.ibatis.reflection.factory.ObjectFactory;
 import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 import org.apache.ibatis.session.ResultContext;
 import org.apache.ibatis.session.ResultHandler;
+
+import java.util.Map;
 
 /**
  * @author Clinton Begin
@@ -40,10 +40,11 @@ public class DefaultMapResultHandler<K, V> implements ResultHandler<V> {
     this.objectFactory = objectFactory;
     this.objectWrapperFactory = objectWrapperFactory;
     this.reflectorFactory = reflectorFactory;
-    this.mappedResults = objectFactory.create(Map.class);
+    this.mappedResults = objectFactory.create(Map.class);  // 是个HashMap
     this.mapKey = mapKey;
   }
 
+  // 该方法应被客户端循环调用，每调用一次，就会往mappedResults中放入一个key/value映射
   @Override
   public void handleResult(ResultContext<? extends V> context) {
     final V value = context.getResultObject();

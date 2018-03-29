@@ -18,6 +18,10 @@ package org.apache.ibatis.reflection.property;
 import java.util.Iterator;
 
 /**
+ *
+ * 属性分词器，迭代器模式。666！
+ * 如person[0].birthdate.year，将依次取得person[0], birthdate, year
+ *
  * @author Clinton Begin
  */
 public class PropertyTokenizer implements Iterator<PropertyTokenizer> {

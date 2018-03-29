@@ -15,39 +15,19 @@
  */
 package org.apache.ibatis.builder;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.StringTokenizer;
-
 import org.apache.ibatis.cache.Cache;
 import org.apache.ibatis.cache.decorators.LruCache;
 import org.apache.ibatis.cache.impl.PerpetualCache;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.executor.keygen.KeyGenerator;
-import org.apache.ibatis.mapping.CacheBuilder;
-import org.apache.ibatis.mapping.Discriminator;
-import org.apache.ibatis.mapping.MappedStatement;
-import org.apache.ibatis.mapping.ParameterMap;
-import org.apache.ibatis.mapping.ParameterMapping;
-import org.apache.ibatis.mapping.ParameterMode;
-import org.apache.ibatis.mapping.ResultFlag;
-import org.apache.ibatis.mapping.ResultMap;
-import org.apache.ibatis.mapping.ResultMapping;
-import org.apache.ibatis.mapping.ResultSetType;
-import org.apache.ibatis.mapping.SqlCommandType;
-import org.apache.ibatis.mapping.SqlSource;
-import org.apache.ibatis.mapping.StatementType;
+import org.apache.ibatis.mapping.*;
 import org.apache.ibatis.reflection.MetaClass;
 import org.apache.ibatis.scripting.LanguageDriver;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
+
+import java.util.*;
 
 /**
  * @author Clinton Begin
@@ -82,16 +62,17 @@ public class MapperBuilderAssistant extends BaseBuilder {
     this.currentNamespace = currentNamespace;
   }
 
+  // 非完全限定名 -> 完全限定名
   public String applyCurrentNamespace(String base, boolean isReference) {
     if (base == null) {
       return null;
     }
-    if (isReference) {
+    if (isReference) { // 如果是"引用"
       // is it qualified with any namespace yet?
       if (base.contains(".")) {
         return base;
       }
-    } else {
+    } else { // 如果是"被引用"
       // is it qualified with this namespace yet?
       if (base.startsWith(currentNamespace + ".")) {
         return base;
@@ -246,6 +227,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return new Discriminator.Builder(configuration, resultMapping, namespaceDiscriminatorMap).build();
   }
 
+  // CRUD标签、<selectKey>标签都会调用该方法
   public MappedStatement addMappedStatement(
       String id,
       SqlSource sqlSource,
@@ -338,6 +320,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
 
     List<ResultMap> resultMaps = new ArrayList<ResultMap>();
     if (resultMap != null) {
+      //2.1 resultMap是高级功能
       String[] resultMapNames = resultMap.split(",");
       for (String resultMapName : resultMapNames) {
         try {
@@ -347,6 +330,13 @@ public class MapperBuilderAssistant extends BaseBuilder {
         }
       }
     } else if (resultType != null) {
+      //2.2 resultType,一般用这个足矣
+      //<select id="selectUsers" resultType="User">
+      //这种情况下,MyBatis 会在幕后自动创建一个 ResultMap,基于属性名来映射列到 JavaBean 的属性上。
+      //如果列名没有精确匹配,你可以在列名上使用 select 字句的别名来匹配标签。
+      //创建一个inline result map, 把resultType设上就OK了，
+      //然后后面被DefaultResultSetHandler.createResultObject()使用
+      //DefaultResultSetHandler.getRowValue()使用
       ResultMap inlineResultMap = new ResultMap.Builder(
           configuration,
           statementId + "-Inline",

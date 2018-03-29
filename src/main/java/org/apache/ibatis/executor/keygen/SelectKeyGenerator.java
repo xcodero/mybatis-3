@@ -15,9 +15,6 @@
  */
 package org.apache.ibatis.executor.keygen;
 
-import java.sql.Statement;
-import java.util.List;
-
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.executor.ExecutorException;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -25,6 +22,9 @@ import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.RowBounds;
+
+import java.sql.Statement;
+import java.util.List;
 
 /**
  * @author Clinton Begin
@@ -55,6 +55,13 @@ public class SelectKeyGenerator implements KeyGenerator {
     }
   }
 
+  /**
+   * 该过程的作用：设置parameter中（keyProperty属性指定）的域。
+   *
+   * @param executor 用于执行查询
+   * @param ms 表示selectKey元素
+   * @param parameter 表示值对象
+   */
   private void processGeneratedKeys(Executor executor, MappedStatement ms, Object parameter) {
     try {
       if (parameter != null && keyStatement != null && keyStatement.getKeyProperties() != null) {
@@ -100,14 +107,14 @@ public class SelectKeyGenerator implements KeyGenerator {
     if (keyColumns == null || keyColumns.length == 0) {
       // no key columns specified, just use the property names
       for (String keyProperty : keyProperties) {
-        setValue(metaParam, keyProperty, metaResult.getValue(keyProperty));
+        setValue(metaParam, keyProperty, metaResult.getValue(keyProperty)); // 没有指定keyColumn属性，用keyProperty代替keyColumn属性。
       }
     } else {
       if (keyColumns.length != keyProperties.length) {
         throw new ExecutorException("If SelectKey has key columns, the number must match the number of key properties.");
       }
       for (int i = 0; i < keyProperties.length; i++) {
-        setValue(metaParam, keyProperties[i], metaResult.getValue(keyColumns[i]));
+        setValue(metaParam, keyProperties[i], metaResult.getValue(keyColumns[i])); // 由此看出：keyColumn属性必须与keyProperty属性一一对应（顺序和个数）。
       }
     }
   }

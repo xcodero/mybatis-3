@@ -15,11 +15,11 @@
  */
 package org.apache.ibatis.cache;
 
+import org.apache.ibatis.reflection.ArrayUtil;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.ibatis.reflection.ArrayUtil;
 
 /**
  * @author Clinton Begin
@@ -65,6 +65,7 @@ public class CacheKey implements Cloneable, Serializable {
 
     hashcode = multiplier * hashcode + baseHashCode;
 
+    //同时将对象加入列表，这样万一两个CacheKey的hash码碰巧一样，再根据对象严格equals来区分
     updateList.add(object);
   }
 
@@ -85,6 +86,7 @@ public class CacheKey implements Cloneable, Serializable {
 
     final CacheKey cacheKey = (CacheKey) object;
 
+    //先比hashcode，checksum，count，理论上可以快速比出来
     if (hashcode != cacheKey.hashcode) {
       return false;
     }
@@ -95,6 +97,7 @@ public class CacheKey implements Cloneable, Serializable {
       return false;
     }
 
+    //万一两个CacheKey的hash码碰巧一样，再根据对象严格equals来区分
     for (int i = 0; i < updateList.size(); i++) {
       Object thisObject = updateList.get(i);
       Object thatObject = cacheKey.updateList.get(i);

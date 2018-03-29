@@ -183,7 +183,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
   public List<Object> handleResultSets(Statement stmt) throws SQLException {
     ErrorContext.instance().activity("handling results").object(mappedStatement.getId());
 
-    final List<Object> multipleResults = new ArrayList<Object>();
+    final List<Object> multipleResults = new ArrayList<Object>(); // 实际上是个二维列表
 
     int resultSetCount = 0;
     ResultSetWrapper rsw = getFirstResultSet(stmt);
@@ -301,7 +301,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
         if (resultHandler == null) {
           DefaultResultHandler defaultResultHandler = new DefaultResultHandler(objectFactory);
           handleRowValues(rsw, resultMap, defaultResultHandler, rowBounds, null);
-          multipleResults.add(defaultResultHandler.getResultList());
+          multipleResults.add(defaultResultHandler.getResultList()); // multipleResults实际上是个二维列表
         } else {
           handleRowValues(rsw, resultMap, resultHandler, rowBounds, null);
         }
@@ -350,7 +350,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
       throws SQLException {
     DefaultResultContext<Object> resultContext = new DefaultResultContext<Object>();
     skipRows(rsw.getResultSet(), rowBounds);
-    while (shouldProcessMoreRows(resultContext, rowBounds) && rsw.getResultSet().next()) {
+    while (shouldProcessMoreRows(resultContext, rowBounds) && rsw.getResultSet().next()) { // 遍历结果集
       ResultMap discriminatedResultMap = resolveDiscriminatedResultMap(rsw.getResultSet(), resultMap, null);
       Object rowValue = getRowValue(rsw, discriminatedResultMap);
       storeObject(resultHandler, resultContext, rowValue, parentMapping, rsw.getResultSet());
@@ -402,7 +402,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
       }
       foundValues = applyPropertyMappings(rsw, resultMap, metaObject, lazyLoader, null) || foundValues;
       foundValues = lazyLoader.size() > 0 || foundValues;
-      rowValue = foundValues || configuration.isReturnInstanceForEmptyRow() ? rowValue : null;
+      rowValue = foundValues || configuration.isReturnInstanceForEmptyRow() ? rowValue : null; // 若1.有行；2.没有行但特殊配置，则返回"未设置属性的目标Java对象"
     }
     return rowValue;
   }
@@ -479,7 +479,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
       autoMapping = new ArrayList<UnMappedColumnAutoMapping>();
       final List<String> unmappedColumnNames = rsw.getUnmappedColumnNames(resultMap, columnPrefix);
       for (String columnName : unmappedColumnNames) {
-        String propertyName = columnName;
+        String propertyName = columnName; // 自动映射
         if (columnPrefix != null && !columnPrefix.isEmpty()) {
           // When columnPrefix is specified,
           // ignore columns without the prefix.
@@ -498,11 +498,11 @@ public class DefaultResultSetHandler implements ResultSetHandler {
           if (typeHandlerRegistry.hasTypeHandler(propertyType, rsw.getJdbcType(columnName))) {
             final TypeHandler<?> typeHandler = rsw.getTypeHandler(propertyType, columnName);
             autoMapping.add(new UnMappedColumnAutoMapping(columnName, property, typeHandler, propertyType.isPrimitive()));
-          } else {
+          } else { // 没有类型处理器，根据配置打印不同级别日志
             configuration.getAutoMappingUnknownColumnBehavior()
                 .doAction(mappedStatement, columnName, property, propertyType);
           }
-        } else {
+        } else { // 没有跟列名对应的属性，根据配置打印不同级别日志
           configuration.getAutoMappingUnknownColumnBehavior()
               .doAction(mappedStatement, columnName, (property != null) ? property : propertyName, null);
         }
@@ -516,12 +516,13 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     List<UnMappedColumnAutoMapping> autoMapping = createAutomaticMappings(rsw, resultMap, metaObject, columnPrefix);
     boolean foundValues = false;
     if (!autoMapping.isEmpty()) {
-      for (UnMappedColumnAutoMapping mapping : autoMapping) {
+      for (UnMappedColumnAutoMapping mapping : autoMapping) { // 一次循环设置一个属性，循环结束后可得到一个对象
+        // 从自动映射中获取类型处理器实现"行迭代"结果集中某一列 -> Java对象的转换
         final Object value = mapping.typeHandler.getResult(rsw.getResultSet(), mapping.column);
         if (value != null) {
           foundValues = true;
         }
-        if (value != null || (configuration.isCallSettersOnNulls() && !mapping.primitive)) {
+        if (value != null || (configuration.isCallSettersOnNulls() && !mapping.primitive)) { // 1.value非null；2.value为null但有特殊设置且目标Java对象的属性不是基本类型
           // gcode issue #377, call setter on nulls (value is not 'found')
           metaObject.setValue(mapping.property, value);
         }
@@ -611,9 +612,9 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     final Class<?> resultType = resultMap.getType();
     final MetaClass metaType = MetaClass.forClass(resultType, reflectorFactory);
     final List<ResultMapping> constructorMappings = resultMap.getConstructorResultMappings();
-    if (hasTypeHandlerForResultObject(rsw, resultType)) {
+    if (hasTypeHandlerForResultObject(rsw, resultType)) { // 1.若有对应的类型处理器
       return createPrimitiveResultObject(rsw, resultMap, columnPrefix);
-    } else if (!constructorMappings.isEmpty()) {
+    } else if (!constructorMappings.isEmpty()) { // 2.若有
       return createParameterizedResultObject(rsw, resultType, constructorMappings, constructorArgTypes, constructorArgs, columnPrefix);
     } else if (resultType.isInterface() || metaType.hasDefaultConstructor()) {
       return objectFactory.create(resultType);
@@ -1148,9 +1149,9 @@ public class DefaultResultSetHandler implements ResultSetHandler {
   }
 
   private boolean hasTypeHandlerForResultObject(ResultSetWrapper rsw, Class<?> resultType) {
-    if (rsw.getColumnNames().size() == 1) {
+    if (rsw.getColumnNames().size() == 1) { // 只有一列时，可把JdbcType带入
       return typeHandlerRegistry.hasTypeHandler(resultType, rsw.getJdbcType(rsw.getColumnNames().get(0)));
-    }
+    } // 多列时则不行
     return typeHandlerRegistry.hasTypeHandler(resultType);
   }
 

@@ -28,6 +28,9 @@ import java.util.Properties;
 /**
  * A class to simplify access to resources through the classloader.
  *
+ * "加载资源"的工具类。
+ * 提示：1、委托给classLoaderWrapper完成；2、对加载结果进行转换，得到client需要的类实例
+ *
  * @author Clinton Begin
  */
 public class Resources {

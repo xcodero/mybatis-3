@@ -18,6 +18,10 @@ package org.apache.ibatis.executor.result;
 import org.apache.ibatis.session.ResultContext;
 
 /**
+ *
+ * resultObject只是暂存，最后会放到DefaultResultHandler中。
+ * resultCount、stopped用于控制结果集的遍历
+ *
  * @author Clinton Begin
  */
 public class DefaultResultContext<T> implements ResultContext<T> {

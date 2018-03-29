@@ -15,21 +15,23 @@
  */
 package org.apache.ibatis.transaction.jdbc;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import javax.sql.DataSource;
-
 import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.logging.LogFactory;
 import org.apache.ibatis.session.TransactionIsolationLevel;
 import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.transaction.TransactionException;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+
 /**
  * {@link Transaction} that makes use of the JDBC commit and rollback facilities directly.
  * It relies on the connection retrieved from the dataSource to manage the scope of the transaction.
  * Delays connection retrieval until getConnection() is called.
  * Ignores commit or rollback requests when autocommit is on.
+ *
+ * JDBC事务：使用JDBC的Connection（从Driver中获取）提交、回滚。
  *
  * @author Clinton Begin
  *

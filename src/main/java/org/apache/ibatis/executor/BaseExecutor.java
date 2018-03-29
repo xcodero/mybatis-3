@@ -15,14 +15,6 @@
  */
 package org.apache.ibatis.executor;
 
-import static org.apache.ibatis.executor.ExecutionPlaceholder.EXECUTION_PLACEHOLDER;
-
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.cache.impl.PerpetualCache;
 import org.apache.ibatis.cursor.Cursor;
@@ -30,11 +22,7 @@ import org.apache.ibatis.executor.statement.StatementUtil;
 import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.logging.LogFactory;
 import org.apache.ibatis.logging.jdbc.ConnectionLogger;
-import org.apache.ibatis.mapping.BoundSql;
-import org.apache.ibatis.mapping.MappedStatement;
-import org.apache.ibatis.mapping.ParameterMapping;
-import org.apache.ibatis.mapping.ParameterMode;
-import org.apache.ibatis.mapping.StatementType;
+import org.apache.ibatis.mapping.*;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.factory.ObjectFactory;
 import org.apache.ibatis.session.Configuration;
@@ -43,6 +31,14 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.type.TypeHandlerRegistry;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import static org.apache.ibatis.executor.ExecutionPlaceholder.EXECUTION_PLACEHOLDER;
 
 /**
  * @author Clinton Begin
@@ -84,17 +80,17 @@ public abstract class BaseExecutor implements Executor {
   public void close(boolean forceRollback) {
     try {
       try {
-        rollback(forceRollback);
+        rollback(forceRollback); // CUD操作但尚未提交|回滚（dirty为true），需先回滚。
       } finally {
         if (transaction != null) {
-          transaction.close();
+          transaction.close(); // 关闭事务（即关闭连接）
         }
       }
     } catch (SQLException e) {
       // Ignore.  There's nothing that can be done at this point.
       log.warn("Unexpected exception on closing transaction.  Cause: " + e);
     } finally {
-      transaction = null;
+      transaction = null; // 尽快垃圾回收
       deferredLoads = null;
       localCache = null;
       localOutputParameterCache = null;
@@ -113,7 +109,7 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
-    clearLocalCache();
+    clearLocalCache(); // CUD操作铁定先清缓存
     return doUpdate(ms, parameter);
   }
 
@@ -143,16 +139,18 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
-    if (queryStack == 0 && ms.isFlushCacheRequired()) {
+
+    // queryStack的含义：query方法的递归调用深度。可视作query栈的头指针。
+    if (queryStack == 0 && ms.isFlushCacheRequired()) { // select操作根据flushCache属性决定先要清不清缓存
       clearLocalCache();
     }
     List<E> list;
     try {
       queryStack++;
-      list = resultHandler == null ? (List<E>) localCache.getObject(key) : null;
-      if (list != null) {
+      list = resultHandler == null ? (List<E>) localCache.getObject(key) : null; // 没有结果处理器时才从缓存中拿；有结果处理器时直接查库
+      if (list != null) { // 查询缓未命中
         handleLocallyCachedOutputParameters(ms, key, parameter, boundSql);
-      } else {
+      } else { // 1.没有结果处理器时缓存未命中；2.有结果处理器时
         list = queryFromDatabase(ms, parameter, rowBounds, resultHandler, key, boundSql);
       }
     } finally {
@@ -164,7 +162,7 @@ public abstract class BaseExecutor implements Executor {
       }
       // issue #601
       deferredLoads.clear();
-      if (configuration.getLocalCacheScope() == LocalCacheScope.STATEMENT) {
+      if (configuration.getLocalCacheScope() == LocalCacheScope.STATEMENT) { // 若设定的一级缓存是"语句级"缓存，则只在同一条select语句内使用缓存。该select语句执行结束，立马清缓存。
         // issue #482
         clearLocalCache();
       }
@@ -197,6 +195,7 @@ public abstract class BaseExecutor implements Executor {
       throw new ExecutorException("Executor was closed.");
     }
     CacheKey cacheKey = new CacheKey();
+    //MyBatis中缓存Key的生成规则为：[mappedStementId + offset + limit + SQL + queryParams + environment]生成一个哈希码
     cacheKey.update(ms.getId());
     cacheKey.update(rowBounds.getOffset());
     cacheKey.update(rowBounds.getLimit());
@@ -204,17 +203,22 @@ public abstract class BaseExecutor implements Executor {
     List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
     TypeHandlerRegistry typeHandlerRegistry = ms.getConfiguration().getTypeHandlerRegistry();
     // mimic DefaultParameterHandler logic
+    //循环读参数
     for (ParameterMapping parameterMapping : parameterMappings) {
-      if (parameterMapping.getMode() != ParameterMode.OUT) {
+      if (parameterMapping.getMode() != ParameterMode.OUT) { // 只拿不是OUT的参数
         Object value;
         String propertyName = parameterMapping.getProperty();
         if (boundSql.hasAdditionalParameter(propertyName)) {
+          //若有额外的参数, 设为额外的参数
           value = boundSql.getAdditionalParameter(propertyName);
         } else if (parameterObject == null) {
+          //若参数为null，直接设null
           value = null;
         } else if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
+          //若参数不为null且有相应的TypeHandler，直接用parameterObject
           value = parameterObject;
         } else {
+          //若参数不为null且又没有相应的TypeHandler，MetaObject.getValue反射获取属性值
           MetaObject metaObject = configuration.newMetaObject(parameterObject);
           value = metaObject.getValue(propertyName);
         }

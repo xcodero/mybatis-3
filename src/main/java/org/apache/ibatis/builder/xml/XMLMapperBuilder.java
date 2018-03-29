@@ -15,37 +15,20 @@
  */
 package org.apache.ibatis.builder.xml;
 
-import java.io.InputStream;
-import java.io.Reader;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
-import org.apache.ibatis.builder.BaseBuilder;
-import org.apache.ibatis.builder.BuilderException;
-import org.apache.ibatis.builder.CacheRefResolver;
-import org.apache.ibatis.builder.IncompleteElementException;
-import org.apache.ibatis.builder.MapperBuilderAssistant;
-import org.apache.ibatis.builder.ResultMapResolver;
+import org.apache.ibatis.builder.*;
 import org.apache.ibatis.cache.Cache;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.io.Resources;
-import org.apache.ibatis.mapping.Discriminator;
-import org.apache.ibatis.mapping.ParameterMapping;
-import org.apache.ibatis.mapping.ParameterMode;
-import org.apache.ibatis.mapping.ResultFlag;
-import org.apache.ibatis.mapping.ResultMap;
-import org.apache.ibatis.mapping.ResultMapping;
+import org.apache.ibatis.mapping.*;
 import org.apache.ibatis.parsing.XNode;
 import org.apache.ibatis.parsing.XPathParser;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
+
+import java.io.InputStream;
+import java.io.Reader;
+import java.util.*;
 
 /**
  * @author Clinton Begin
@@ -89,11 +72,15 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   public void parse() {
     if (!configuration.isResourceLoaded(resource)) {
-      configurationElement(parser.evalNode("/mapper"));
+      // 加载资源
+      configurationElement(parser.evalNode("/mapper")); // "加载资源"的含义：解析XML文件，将内容填充到内存的数据结构Configuration对象里。
       configuration.addLoadedResource(resource);
-      bindMapperForNamespace();
+      bindMapperForNamespace(); // 先加载XML文件，再（根据XML文件中配置的namespace属性）加载class文件
     }
 
+    // 由于在初次解析过程中，可能因为XML文件加载顺序导致有的标签解析失败——如解析cacheRef时依赖的namespace当时未加载
+    // 在所有XML文件加载完成后，需要再次解析初次解析失败的标签。
+    // 由此解决：XML文件加载顺序与标签依赖顺序不一致的问题。
     parsePendingResultMaps();
     parsePendingCacheRefs();
     parsePendingStatements();
@@ -252,10 +239,19 @@ public class XMLMapperBuilder extends BaseBuilder {
     return resultMapElement(resultMapNode, Collections.<ResultMapping> emptyList());
   }
 
+
+//  	<resultMap id="selectAuthor" type="org.apache.ibatis.domain.blog.Author">
+//		<id column="id" property="id" />
+//		<result property="username" column="username" />
+//		<result property="password" column="password" />
+//		<result property="email" column="email" />
+//		<result property="bio" column="bio" />
+//		<result property="favouriteSection" column="favourite_section" />
+//	</resultMap>
   private ResultMap resultMapElement(XNode resultMapNode, List<ResultMapping> additionalResultMappings) throws Exception {
     ErrorContext.instance().activity("processing " + resultMapNode.getValueBasedIdentifier());
     String id = resultMapNode.getStringAttribute("id",
-        resultMapNode.getValueBasedIdentifier());
+        resultMapNode.getValueBasedIdentifier()); // 这里"valueBasedIdentifier"是作为后备id，形如mapper_resultMap[selectAuthor]
     String type = resultMapNode.getStringAttribute("type",
         resultMapNode.getStringAttribute("ofType",
             resultMapNode.getStringAttribute("resultType",
@@ -267,7 +263,7 @@ public class XMLMapperBuilder extends BaseBuilder {
     List<ResultMapping> resultMappings = new ArrayList<ResultMapping>();
     resultMappings.addAll(additionalResultMappings);
     List<XNode> resultChildren = resultMapNode.getChildren();
-    for (XNode resultChild : resultChildren) {
+     for (XNode resultChild : resultChildren) {
       if ("constructor".equals(resultChild.getName())) {
         processConstructorElement(resultChild, typeClass, resultMappings);
       } else if ("discriminator".equals(resultChild.getName())) {
@@ -331,7 +327,7 @@ public class XMLMapperBuilder extends BaseBuilder {
       String databaseId = context.getStringAttribute("databaseId");
       String id = context.getStringAttribute("id");
       id = builderAssistant.applyCurrentNamespace(id, false);
-      if (databaseIdMatchesCurrent(id, databaseId, requiredDatabaseId)) {
+      if (databaseIdMatchesCurrent(id, databaseId, requiredDatabaseId)) { // databaseId不匹配的不会放入sqlFragments中
         sqlFragments.put(id, context);
       }
     }
@@ -347,6 +343,7 @@ public class XMLMapperBuilder extends BaseBuilder {
         return false;
       }
       // skip this fragment if there is a previous one with a not null databaseId
+      // 1.如果之前有非null databaseId的同名sql片段，则跳过当前sql片段；2.如果之前有null databaseId的同名sql片段，则用当前sql片段覆盖之前的sql片段
       if (this.sqlFragments.containsKey(id)) {
         XNode context = this.sqlFragments.get(id);
         if (context.getStringAttribute("databaseId") != null) {
